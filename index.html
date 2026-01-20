@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Solana Governance Policy Engine</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta
+    name="description"
+    content="A standards-driven rules engine for Solana DAOs and programs, enforcing governance policies as code."
+  />
+  <link rel="icon" href="https://gitdigital-products.github.io/favicon.ico" />
+
+  <style>
+    :root {
+      --bg: #050814;
+      --bg-alt: #0b1020;
+      --accent: #15f2a4;
+      --accent-soft: rgba(21, 242, 164, 0.12);
+      --accent-strong: rgba(21, 242, 164, 0.3);
+      --text: #f5f7ff;
+      --muted: #9aa0c2;
+      --border: #1b2238;
+      --danger: #ff4b6a;
+      --code-bg: #050814;
+      --code-border: #222a40;
+      --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
+        "Segoe UI", sans-serif;
+      --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo,
+        Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --radius-lg: 18px;
+      --radius-md: 12px;
+      --radius-sm: 8px;
+      --shadow-soft: 0 18px 45px rgba(0, 0, 0, 0.55);
+      --shadow-subtle: 0 10px 30px rgba(0, 0, 0, 0.35);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: var(--font-sans);
+      background: radial-gradient(circle at top, #101633 0, #050814 55%);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    .page {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(
+        120deg,
+        rgba(21, 242, 164, 0.08),
+        transparent 40%
+      );
+      backdrop-filter: blur(18px);
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+
+    .nav {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .nav-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-pill {
+      width: 34px;
+      height: 34px;
+      border-radius: 999px;
+      background: radial-gradient(circle at 30% 0, #ffffff, #15f2a4 40%, #050814);
+      box-shadow: 0 0 0 1px rgba(21, 242, 164, 0.4),
+        0 0 30px rgba(21, 242, 164, 0.5);
+    }
+
+    .nav-title {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .nav-title span:first-child {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+    }
+
+    .nav-title span:last-child {
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .nav-links a {
+      color: var(--muted);
+      text-decoration: none;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid transparent;
+    }
+
+    .nav-links a:hover {
+      border-color: var(--border);
+      color: var(--text);
+      background: rgba(11, 16, 32, 0.9);
+    }
+
+    .nav-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(21, 242, 164, 0.6);
+      background: radial-gradient(circle at top left, #15f2a4 0, #050814 55%);
+      color: #050814;
+      font-size: 13px;
+      font-weight: 600;
+      text-decoration: none;
+      box-shadow: 0 0 0 1px rgba(5, 8, 20, 0.8),
+        0 12px 30px rgba(0, 0, 0, 0.7);
+    }
+
+    .nav-cta span.badge {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(5, 8, 20, 0.12);
+      color: #050814;
+    }
+
+    main {
+      flex: 1;
+    }
+
+    .hero {
+      max-width: 1120px;
+      margin: 32px auto 0;
+      padding: 0 20px 40px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.1fr);
+      gap: 32px;
+      align-items: flex-start;
+    }
+
+    @media (max-width: 880px) {
+      .hero {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    .hero-left {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .hero-badge-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .hero-badge {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(21, 242, 164, 0.6);
+      background: rgba(11, 16, 32, 0.9);
+      color: var(--accent);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .hero-badge-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--accent);
+      box-shadow: 0 0 12px rgba(21, 242, 164, 0.9);
+    }
+
+    .hero-title {
+      font-size: clamp(32px, 4vw, 40px);
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+    }
+
+    .hero-title span.accent {
+      background: linear-gradient(120deg, #15f2a4, #7af2ff);
+      -webkit-background-clip: text;
+      color: transparent;
+    }
+
+    .hero-subtitle {
+      font-size: 15px;
+      color: var(--muted);
+      max-width: 520px;
+    }
+
+    .hero-subtitle strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .hero-meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .hero-meta-pill {
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(5, 8, 20, 0.9);
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 4px;
+    }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 16px;
+      border-radius: 999px;
+      border: 1px solid rgba(21, 242, 164, 0.7);
+      background: radial-gradient(circle at top left, #15f2a4 0, #050814 60%);
+      color: #050814;
+      font-size: 13px;
+      font-weight: 600;
+      text-decoration: none;
+      box-shadow: var(--shadow-soft);
+    }
+
+    .btn-ghost {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(5, 8, 20, 0.9);
+      color: var(--muted);
+      font-size: 13px;
+      text-decoration: none;
+    }
+
+    .btn-ghost:hover {
+      border-color: rgba(21, 242, 164, 0.5);
+      color: var(--text);
+    }
+
+    .hero-right {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .card {
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      background: radial-gradient(circle at top left, #151a33 0, #050814 55%);
+      box-shadow: var(--shadow-soft);
+      padding: 16px 16px 18px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: -40%;
+      background: radial-gradient(
+        circle at top,
+        rgba(21, 242, 164, 0.12),
+        transparent 55%
+      );
+      opacity: 0.7;
+      pointer-events: none;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .card-title {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: var(--muted);
+    }
+
+    .card-badge {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(21, 242, 164, 0.6);
+      background: rgba(5, 8, 20, 0.9);
+      color: var(--accent);
+    }
+
+    .card-body {
+      position: relative;
+      z-index: 1;
+    }
+
+    .code-tabs {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+
+    .code-tab {
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(5, 8, 20, 0.9);
+      color: var(--muted);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .code-tab.active {
+      border-color: rgba(21, 242, 164, 0.8);
+      background: rgba(21, 242, 164, 0.12);
+      color: var(--accent);
+    }
+
+    pre {
+      margin: 0;
+      padding: 12px 12px 10px;
+      border-radius: var(--radius-md);
+      background: var(--code-bg);
+      border: 1px solid var(--code-border);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      line-height: 1.5;
+      color: #e6ecff;
+      overflow-x: auto;
+      max-height: 320px;
+    }
+
+    code {
+      font-family: var(--font-mono);
+    }
+
+    .code-block {
+      display: none;
+    }
+
+    .code-block.active {
+      display: block;
+    }
+
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .pill {
+      padding: 3px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(5, 8, 20, 0.9);
+    }
+
+    .pill.accent {
+      border-color: rgba(21, 242, 164, 0.7);
+      color: var(--accent);
+      background: rgba(21, 242, 164, 0.08);
+    }
+
+    .section {
+      max-width: 1120px;
+      margin: 0 auto 40px;
+      padding: 0 20px;
+    }
+
+    .section-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.1fr);
+      gap: 24px;
+    }
+
+    @media (max-width: 880px) {
+      .section-grid {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    .section-title {
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .section-heading {
+      font-size: 20px;
+      margin-bottom: 10px;
+    }
+
+    .section-text {
+      font-size: 14px;
+      color: var(--muted);
+      max-width: 520px;
+    }
+
+    .badge-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+      font-size: 11px;
+    }
+
+    .badge-soft {
+      padding: 4px 9px;
+      border-radius: 999px;
+      background: rgba(11, 16, 32, 0.9);
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+
+    .badge-soft.accent {
+      border-color: rgba(21, 242, 164, 0.7);
+      color: var(--accent);
+      background: rgba(21, 242, 164, 0.08);
+    }
+
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 16px 20px 22px;
+      font-size: 12px;
+      color: var(--muted);
+      background: #050814;
+    }
+
+    .footer-inner {
+      max-width: 1120px;
+      margin: 0 auto;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .footer-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .footer-links a {
+      color: var(--muted);
+      text-decoration: none;
+    }
+
+    .footer-links a:hover {
+      color: var(--accent);
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <div class="nav">
+        <div class="nav-left">
+          <div class="logo-pill"></div>
+          <div class="nav-title">
+            <span>GitDigital Products</span>
+            <span>Solana Governance Policy Engine</span>
+          </div>
+        </div>
+        <div class="nav-links">
+          <a href="#overview">Overview</a>
+          <a href="#clients">Clients</a>
+          <a href="#server">Server</a>
+          <a href="https://github.com/Gitdigital-products/solana-governance-policy-engine" target="_blank" rel="noopener noreferrer">
+            Repo
+          </a>
+          <a
+            class="nav-cta"
+            href="https://gitdigital-products.github.io/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <span class="badge">Ecosystem</span>
+            <span>GitDigital Products</span>
+          </a>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero" id="overview">
+        <div class="hero-left">
+          <div class="hero-badge-row">
+            <div class="hero-badge">
+              <span class="hero-badge-dot"></span>
+              <span>Standards‑Driven Governance Engine</span>
+            </div>
+            <span style="font-size: 11px; color: var(--muted);">
+              Solana • DAOs • Policy‑as‑Code
+            </span>
+          </div>
+
+          <h1 class="hero-title">
+            Enforce <span class="accent">governance policies as code</span> for
+            Solana DAOs and programs.
+          </h1>
+
+          <p class="hero-subtitle">
+            The Solana Governance Policy Engine is a
+            <strong>rules‑driven enforcement layer</strong> for DAOs and
+            on‑chain programs—codifying quorum, role‑based permissions, KYC
+            checks, and escalation paths into a reusable, auditable engine.
+          </p>
+
+          <div class="hero-meta-row">
+            <div class="hero-meta-pill">MIT Licensed • Open Source</div>
+            <div class="hero-meta-pill">Async Off‑Chain Verification Daemon</div>
+            <div class="hero-meta-pill">Designed for production‑grade DAOs</div>
+          </div>
+
+          <div class="hero-actions">
+            <a
+              class="btn-primary"
+              href="https://github.com/Gitdigital-products/solana-governance-policy-engine"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <span>Open GitHub Template</span>
+            </a>
+            <a class="btn-ghost" href="#clients">
+              <span>View Multi‑Language Clients</span>
+            </a>
+          </div>
+        </div>
+
+        <div class="hero-right">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Policy evaluation flow</div>
+              <div class="card-badge">Solana + Off‑Chain Signals</div>
+            </div>
+            <div class="card-body">
+              <pre><code>// Pseudocode: high‑level evaluation pipeline
+
+on_proposal_created(proposal) {
+  // 1. Load DAO policy pack
+  policy = load_policy(proposal.dao_id)
+
+  // 2. Resolve on‑chain context
+  ctx = {
+    dao_state: fetch_dao_state(proposal.dao_id),
+    stake_snapshot: fetch_stake(proposal.dao_id),
+    proposal_meta: proposal.metadata,
+  }
+
+  // 3. Pull off‑chain verification signals (KYC, sanctions, risk)
+  signals = async_verifier.fetch_signals(proposal.initiator)
+
+  // 4. Evaluate rules
+  result = policy_engine.evaluate({
+    context: ctx,
+    signals: signals,
+    action: "CREATE_PROPOSAL",
+  })
+
+  // 5. Enforce
+  if (!result.allowed) {
+    revert("POLICY_VIOLATION", result.reason_code)
+  }
+}</code></pre>
+              <div class="pill-row">
+                <div class="pill accent">Deterministic policy evaluation</div>
+                <div class="pill">Composable rule packs</div>
+                <div class="pill">Audit‑ready decision traces</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card" style="margin-top: 12px;">
+            <div class="card-header">
+              <div class="card-title">Integration surface</div>
+              <div class="card-badge">Go • Kotlin • Python • JS</div>
+            </div>
+            <div class="card-body">
+              <p style="font-size: 13px; color: var(--muted); margin: 0 0 6px;">
+                Use the engine from <strong>Go, Kotlin, Python, or JavaScript</strong> clients,
+                backed by a Python policy API for off‑chain evaluation and async verification.
+              </p>
+              <div class="pill-row">
+                <div class="pill accent">REST / JSON‑RPC boundary</div>
+                <div class="pill">Solana program hooks</div>
+                <div class="pill">Off‑chain daemon for KYC / risk</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="clients">
+        <div class="section-grid">
+          <div>
+            <div class="section-title">Client SDKs</div>
+            <h2 class="section-heading">Multi‑language policy clients</h2>
+            <p class="section-text">
+              The policy engine is designed to be called from multiple runtimes:
+              <strong>Go</strong> for Solana‑adjacent services, <strong>Kotlin</strong> for JVM
+              backends, <strong>Python</strong> for orchestration and analytics, and
+              <strong>JavaScript</strong> for dashboards and admin consoles. All clients speak a
+              simple JSON policy‑evaluation contract over HTTP.
+            </p>
+            <div class="badge-row">
+              <div class="badge-soft accent">Language‑agnostic policy API</div>
+              <div class="badge-soft">Deterministic request / response schema</div>
+              <div class="badge-soft">Trace IDs for audits</div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Client examples</div>
+              <div class="card-badge">Copy‑paste ready</div>
+            </div>
+            <div class="card-body">
+              <div class="code-tabs" data-tabs="client-tabs">
+                <div class="code-tab active" data-target="client-js">JavaScript</div>
+                <div class="code-tab" data-target="client-py">Python</div>
+                <div class="code-tab" data-target="client-go">Go</div>
+                <div class="code-tab" data-target="client-kt">Kotlin</div>
+              </div>
+
+              <div class="code-block active" id="client-js">
+<pre><code>// JavaScript client (browser / Node)
+
+async function evaluatePolicy(payload) {
+  const res = await fetch("https://your-policy-api.example.com/evaluate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      action: "CAST_VOTE",
+      dao_id: payload.daoId,
+      wallet: payload.wallet,
+      proposal_id: payload.proposalId,
+      stake: payload.stakeLamports,
+      context: {
+        slot: payload.slot,
+        cluster: payload.cluster,
+      },
+    }),
+  });
+
+  if (!res.ok) {
+    throw new Error("Policy API error: " + res.status);
+  }
+
+  const body = await res.json();
+  if (!body.allowed) {
+    console.warn("Vote blocked by policy:", body.reason_code);
+  }
+  return body;
+}</code></pre>
+              </div>
+
+              <div class="code-block" id="client-py">
+<pre><code># Python client
+
+import requests
+
+def evaluate_policy(base_url: str, payload: dict) -> dict:
+  resp = requests.post(
+      f"{base_url}/evaluate",
+      json={
+          "action": "CREATE_PROPOSAL",
+          "dao_id": payload["dao_id"],
+          "wallet": payload["wallet"],
+          "metadata": payload.get("metadata", {}),
+          "context": {
+              "cluster": payload.get("cluster", "mainnet-beta"),
+              "slot": payload.get("slot"),
+          },
+      },
+      timeout=5,
+  )
+  resp.raise_for_status()
+  body = resp.json()
+  if not body.get("allowed", False):
+      print("Policy violation:", body.get("reason_code"))
+  return body</code></pre>
+              </div>
+
+              <div class="code-block" id="client-go">
+<pre><code>// Go client
+
+package policy
+
+import (
+  "bytes"
+  "context"
+  "encoding/json"
+  "net/http"
+  "time"
+)
+
+type EvaluateRequest struct {
+  Action  string                 `json:"action"`
+  DaoID   string                 `json:"dao_id"`
+  Wallet  string                 `json:"wallet"`
+  Context map[string]interface{} `json:"context,omitempty"`
+}
+
+type EvaluateResponse struct {
+  Allowed    bool   `json:"allowed"`
+  ReasonCode string `json:"reason_code"`
+  Trac
